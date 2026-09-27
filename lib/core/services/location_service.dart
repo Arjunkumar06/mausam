@@ -38,6 +38,53 @@ class LocationService {
       }
     } catch (_) {}
 
+    // IP Provider 1: ip-api.com
+    try {
+      final url = Uri.parse('http://ip-api.com/json/');
+      final resp = await http.get(url).timeout(const Duration(seconds: 4));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        if (data['status'] == 'success') {
+          final lat = (data['lat'] as num?)?.toDouble();
+          final lon = (data['lon'] as num?)?.toDouble();
+          final city = data['city'];
+          final region = data['regionName'];
+          if (lat != null && lon != null && city != null) {
+            return LocationResult(
+              latitude: lat,
+              longitude: lon,
+              cityName: '$city, $region',
+              isRealGps: false,
+            );
+          }
+        }
+      }
+    } catch (_) {}
+
+    // IP Provider 2: ipwho.is
+    try {
+      final url = Uri.parse('https://ipwho.is/');
+      final resp = await http.get(url).timeout(const Duration(seconds: 4));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        if (data['success'] == true) {
+          final lat = (data['latitude'] as num?)?.toDouble();
+          final lon = (data['longitude'] as num?)?.toDouble();
+          final city = data['city'];
+          final region = data['region'];
+          if (lat != null && lon != null && city != null) {
+            return LocationResult(
+              latitude: lat,
+              longitude: lon,
+              cityName: '$city, $region',
+              isRealGps: false,
+            );
+          }
+        }
+      }
+    } catch (_) {}
+
+    // IP Provider 3: ipapi.co
     try {
       final url = Uri.parse('https://ipapi.co/json/');
       final resp = await http.get(url).timeout(const Duration(seconds: 4));
@@ -70,12 +117,19 @@ class LocationService {
     final locLower = trimmed.toLowerCase();
     final quickCoords = <String, Map<String, dynamic>>{
       'coimbatore': {'lat': 11.0168, 'lon': 76.9558, 'name': 'Coimbatore, TN'},
+      'erode': {'lat': 11.3410, 'lon': 77.7172, 'name': 'Erode, TN'},
+      'salem': {'lat': 11.6643, 'lon': 78.1460, 'name': 'Salem, TN'},
+      'tiruppur': {'lat': 11.1085, 'lon': 77.3411, 'name': 'Tiruppur, TN'},
       'ooty': {'lat': 11.4102, 'lon': 76.6950, 'name': 'Ooty, TN'},
       'udagamandalam': {'lat': 11.4102, 'lon': 76.6950, 'name': 'Ooty, TN'},
       'chennai': {'lat': 13.0827, 'lon': 80.2707, 'name': 'Chennai, TN'},
       'bengaluru': {'lat': 12.9716, 'lon': 77.5946, 'name': 'Bengaluru, KA'},
       'bangalore': {'lat': 12.9716, 'lon': 77.5946, 'name': 'Bengaluru, KA'},
       'madurai': {'lat': 9.9252, 'lon': 78.1198, 'name': 'Madurai, TN'},
+      'trichy': {'lat': 10.7905, 'lon': 78.7047, 'name': 'Tiruchirappalli, TN'},
+      'tiruchirappalli': {'lat': 10.7905, 'lon': 78.7047, 'name': 'Tiruchirappalli, TN'},
+      'thanjavur': {'lat': 10.7870, 'lon': 79.1378, 'name': 'Thanjavur, TN'},
+      'vellore': {'lat': 12.9165, 'lon': 79.1325, 'name': 'Vellore, TN'},
       'mumbai': {'lat': 19.0760, 'lon': 72.8777, 'name': 'Mumbai, MH'},
       'delhi': {'lat': 28.6139, 'lon': 77.2090, 'name': 'Delhi, DL'},
       'new delhi': {'lat': 28.6139, 'lon': 77.2090, 'name': 'New Delhi, DL'},
@@ -126,9 +180,26 @@ class LocationService {
   }
 
   Future<String> reverseGeocode(double lat, double lon) async {
+    // Primary: BigDataCloud Reverse Geocode Client API
+    try {
+      final url = Uri.parse('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=en');
+      final resp = await http.get(url).timeout(const Duration(seconds: 4));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        final city = data['locality'] ?? data['city'];
+        final state = data['principalSubdivision'] ?? data['countryName'];
+        if (city != null && city.toString().trim().isNotEmpty) {
+          return state != null && state.toString().trim().isNotEmpty
+              ? '${city.toString().trim()}, ${state.toString().trim()}'
+              : city.toString().trim();
+        }
+      }
+    } catch (_) {}
+
+    // Secondary: Nominatim OpenStreetMap
     try {
       final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=16');
-      final resp = await http.get(url, headers: {'User-Agent': 'MausamApp/1.0'}).timeout(const Duration(seconds: 5));
+      final resp = await http.get(url, headers: {'User-Agent': 'MausamApp/1.0'}).timeout(const Duration(seconds: 4));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final address = data['address'] as Map<String, dynamic>?;
@@ -150,6 +221,7 @@ class LocationService {
         }
       }
     } catch (_) {}
+
     return '${lat.toStringAsFixed(2)}°N, ${lon.toStringAsFixed(2)}°E';
   }
 }

@@ -89,8 +89,10 @@ class _PersonalizedHomeScreenState extends State<PersonalizedHomeScreen> {
         await _loadLiveWeatherData();
         if (mounted) {
           _showToastNotification(
-            'Live Location detected: ${result.cityName} (${result.latitude.toStringAsFixed(2)}°, ${result.longitude.toStringAsFixed(2)}°)',
-            backgroundColor: AppColors.farmerGreen,
+            result.isRealGps
+                ? 'Exact GPS Location detected: ${result.cityName} (${result.latitude.toStringAsFixed(2)}°, ${result.longitude.toStringAsFixed(2)}°)'
+                : 'Detected via IP Network: ${result.cityName}. Tap search to refine.',
+            backgroundColor: result.isRealGps ? AppColors.farmerGreen : AppColors.primaryBlue,
           );
         }
       }
