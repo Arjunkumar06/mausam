@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mausam — Live Real-Time Location & Weather Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f8fafc; }
+    .card-general { border-left: 5px solid #1e88e5; }
+    .card-farmer { border-left: 5px solid #2e7d32; }
+    .card-traveller { border-left: 5px solid #00acc1; }
+    .badge-priority { font-size: 0.75rem; border-radius: 12px; }
+    .hero-box { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; border-radius: 20px; }
+    .farmer-box { background: linear-gradient(135deg, #198754 0%, #146c43 100%); color: white; border-radius: 20px; }
+    .traveller-box { background: linear-gradient(135deg, #0dcaf0 0%, #0891b2 100%); color: white; border-radius: 20px; }
+    .stat-badge { background: rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; }
+    .live-badge { background: #198754; color: #ffffff; font-weight: 700; font-size: 0.75rem; padding: 6px 12px; border-radius: 20px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+  </style>
+</head>
+<body class="p-3 p-md-5">
+  <div class="container max-width-1000">
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom flex-wrap gap-2">
+      <div class="d-flex align-items-center">
+        <div class="bg-primary text-white p-2 rounded-3 me-3 fs-3">
+          <i class="bi bi-cloud-sun"></i>
+        </div>
+        <div>
+          <h2 class="m-0 text-primary fw-bold">Mausam</h2>
+          <span class="text-muted small">Real-Time Live Location Weather Portal</span>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button onclick="requestLiveGPSLocation()" class="btn btn-sm btn-success fw-bold px-3">
+          <i class="bi bi-crosshair me-1"></i> Detect My Live Location
+        </button>
+        <span class="live-badge">
+          <i class="bi bi-record-fill me-1 text-warning"></i> LIVE REAL-TIME DATA
+        </span>
+      </div>
+    </div>
+
+    <!-- Active Location Bar & Optional City Search -->
+    <div class="card shadow-sm mb-4 border-0">
+      <div class="card-body bg-white rounded-3">
+        <div class="row align-items-center g-3">
+          <div class="col-md-7">
+            <span class="text-muted small text-uppercase fw-bold"><i class="bi bi-geo-alt-fill text-danger me-1"></i> Live Real Location:</span>
+            <h4 class="fw-bold m-0 text-dark" id="display-location">Detecting your exact live location...</h4>
+            <span class="text-muted fs-6" id="location-status-badge">Detecting GPS & OpenStreetMap reverse geocode...</span>
+          </div>
+          <div class="col-md-5">
+            <div class="input-group">
+              <input type="text" id="city-input" class="form-control" placeholder="Search another location (optional)...">
+              <button onclick="applyManualCity()" class="btn btn-outline-primary fw-bold">
+                <i class="bi bi-search me-1"></i> Search
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dynamic Hero Banner with REAL Live Data -->
+    <div id="hero-banner" class="hero-box p-4 mb-4 shadow">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <span><i class="bi bi-geo-alt-fill me-1"></i> <strong id="hero-location" class="fs-5">Detecting GPS...</strong></span>
+        <span class="badge bg-white text-dark small" id="hero-source">Fetching Open-Meteo Live Data...</span>
+      </div>
+      
+      <div class="row align-items-center">
+        <div class="col-md-7">
+          <div class="d-flex align-items-baseline">
+            <h1 class="display-2 fw-bold m-0" id="hero-temp">--°C</h1>
+            <span class="ms-3 fs-5 opacity-75" id="hero-feels">Feels --°C</span>
+          </div>
+          <p class="fs-5 mt-2 mb-0" id="hero-desc">Connecting to live weather sensors...</p>
+        </div>
+        <div class="col-md-5 text-md-end text-center mt-3 mt-md-0">
+          <i class="bi bi-cloud-sun display-1" id="hero-icon"></i>
+        </div>
+      </div>
+
+      <hr class="my-3 opacity-25">
+
+      <!-- Dynamic Live Sensor Metrics Strip -->
+      <div class="row g-2 text-center" id="sensor-metrics-strip">
+        <div class="col-6 col-md-3">
+          <div class="stat-badge">
+            <div class="small opacity-75"><i class="bi bi-droplet-fill me-1"></i> Live Rain Prob</div>
+            <strong class="fs-6" id="metric-rain">--%</strong>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-badge">
+            <div class="small opacity-75"><i class="bi bi-water me-1"></i> Live Humidity</div>
+            <strong class="fs-6" id="metric-humidity">--%</strong>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-badge">
+            <div class="small opacity-75"><i class="bi bi-wind me-1"></i> Live Wind Speed</div>
+            <strong class="fs-6" id="metric-wind">-- km/h</strong>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="stat-badge">
+            <div class="small opacity-75"><i class="bi bi-tree-fill me-1"></i> Live Soil Moisture</div>
+            <strong class="fs-6" id="metric-soil">--%</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Persona Switcher Control -->
+    <div class="card shadow-sm mb-4 border-0">
+      <div class="card-body">
+        <h6 class="text-muted text-uppercase fw-bold small mb-3">
+          <i class="bi bi-sliders me-1"></i> Rule Engine Persona Switcher
+        </h6>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <button onclick="setPersona('general')" id="btn-general" class="btn btn-primary w-100 fw-bold py-2">
+              <i class="bi bi-person me-1"></i> General Citizen
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button onclick="setPersona('farmer')" id="btn-farmer" class="btn btn-outline-success w-100 fw-bold py-2">
+              <i class="bi bi-tree me-1"></i> Farmer (Agri Focus)
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button onclick="setPersona('traveller')" id="btn-traveller" class="btn btn-outline-info w-100 fw-bold py-2">
+              <i class="bi bi-compass me-1"></i> Traveller (Route Safety)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h5 class="fw-bold mb-3"><i class="bi bi-stack me-2"></i> Ranked Homepage Cards (Priority Ordered)</h5>
+    <div id="cards-container">
+      <!-- Dynamically loaded -->
+    </div>
+  </div>
+
+  <script>
+    let currentPersona = 'general';
+    let currentLocationName = 'Your Live Location';
+    let currentLat = null;
+    let currentLon = null;
+
+    async function fetchLiveWeather(locationName, lat, lon) {
+      try {
+        let url = `/api/v1/weather/current?location=${encodeURIComponent(locationName)}`;
+        if (lat !== null && lon !== null) {
+          url += `&lat=${lat}&lon=${lon}`;
+        }
+        
+        const res = await fetch(url);
+        const obs = await res.json();
+        
+        // Update Hero Card UI with REAL LIVE meteorological values
+        document.getElementById('hero-temp').innerText = `${obs.temp}°C`;
+        document.getElementById('hero-feels').innerText = `Feels ${obs.feels_like}°C`;
+        document.getElementById('hero-desc').innerText = `Live AQI: ${obs.aqi} (${obs.aqi_status}) • UV: ${obs.uv_index}`;
+        document.getElementById('metric-rain').innerText = `${obs.rain_probability}% (${obs.rain_amount_mm} mm)`;
+        document.getElementById('metric-humidity').innerText = `${obs.humidity}%`;
+        document.getElementById('metric-wind').innerText = `${obs.wind_speed} km/h ${obs.wind_direction}`;
+        document.getElementById('metric-soil').innerText = `${obs.soil_moisture}% (${obs.soil_temp}°C)`;
+        document.getElementById('hero-source').innerText = `${obs.source}`;
+      } catch (err) {
+        console.error("Error fetching live weather:", err);
+      }
+    }
+
+    async function reverseGeocode(lat, lon) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        if (res.ok) {
+          const data = await res.json();
+          const addr = data.address || {};
+          const area = addr.suburb || addr.neighbourhood || addr.residential || addr.town || addr.city || addr.county || 'Your Area';
+          const city = addr.city || addr.town || addr.county || addr.state_district || '';
+          const state = addr.state || addr.country || '';
+          
+          if (city && city !== area) {
+            return `${area}, ${city}, ${state}`;
+          } else {
+            return `${area}, ${state}`;
+          }
+        }
+      } catch (e) {
+        console.warn("Reverse geocode fallback:", e);
+      }
+      return `GPS Location (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)`;
+    }
+
+    function requestLiveGPSLocation() {
+      document.getElementById('display-location').innerText = 'Requesting browser GPS location...';
+      document.getElementById('location-status-badge').innerHTML = '<span class="badge bg-warning text-dark">Prompting GPS access...</span>';
+
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            currentLat = pos.coords.latitude;
+            currentLon = pos.coords.longitude;
+            
+            document.getElementById('location-status-badge').innerHTML = '<span class="badge bg-info">Reverse Geocoding Location...</span>';
+            currentLocationName = await reverseGeocode(currentLat, currentLon);
+            
+            document.getElementById('display-location').innerText = currentLocationName;
+            document.getElementById('hero-location').innerText = currentLocationName;
+            document.getElementById('location-status-badge').innerHTML = `<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i> Live GPS Active (Lat: ${currentLat.toFixed(2)}°, Lon: ${currentLon.toFixed(2)}°)</span>`;
+            
+            await fetchLiveWeather(currentLocationName, currentLat, currentLon);
+            fetchPersonalizedCards(currentPersona);
+          },
+          async (err) => {
+            console.warn("GPS Permission Denied or Timeout:", err.message);
+            // Fallback to IP Geolocation if browser GPS is denied
+            await detectIPLocationFallback();
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+      } else {
+        detectIPLocationFallback();
+      }
+    }
+
+    async function detectIPLocationFallback() {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+          const data = await res.json();
+          currentLat = data.latitude;
+          currentLon = data.longitude;
+          currentLocationName = `${data.city || 'Detected City'}, ${data.region || data.country_name}`;
+          
+          document.getElementById('display-location').innerText = currentLocationName;
+          document.getElementById('hero-location').innerText = currentLocationName;
+          document.getElementById('location-status-badge').innerHTML = '<span class="badge bg-success"><i class="bi bi-wifi me-1"></i> IP Location Active</span>';
+          
+          await fetchLiveWeather(currentLocationName, currentLat, currentLon);
+          fetchPersonalizedCards(currentPersona);
+          return;
+        }
+      } catch (e) {
+        console.warn("IP Geolocation fallback failed:", e);
+      }
+
+      currentLocationName = 'Coimbatore, Tamil Nadu';
+      currentLat = 11.0168;
+      currentLon = 76.9558;
+      document.getElementById('display-location').innerText = currentLocationName;
+      document.getElementById('hero-location').innerText = currentLocationName;
+      document.getElementById('location-status-badge').innerHTML = '<span class="badge bg-secondary">Default City</span>';
+      
+      await fetchLiveWeather(currentLocationName, currentLat, currentLon);
+      fetchPersonalizedCards(currentPersona);
+    }
+
+    function applyManualCity() {
+      const inputVal = document.getElementById('city-input').value.trim();
+      if (inputVal) {
+        currentLocationName = inputVal;
+        currentLat = null;
+        currentLon = null;
+        document.getElementById('display-location').innerText = currentLocationName;
+        document.getElementById('hero-location').innerText = currentLocationName;
+        document.getElementById('location-status-badge').innerHTML = '<span class="badge bg-info">Search Override</span>';
+        fetchLiveWeather(currentLocationName, null, null);
+        fetchPersonalizedCards(currentPersona);
+      }
+    }
+
+    async function fetchPersonalizedCards(userType) {
+      currentPersona = userType;
+      updateButtons(userType);
+
+      const payload = {
+        user_type: userType,
+        interests: userType === 'farmer' ? ['Agriculture', 'Soil'] : (userType === 'traveller' ? ['Travel', 'Visibility'] : ['Rain', 'AQI']),
+        location: currentLocationName,
+        lat: currentLat,
+        lon: currentLon,
+        crop: ""
+      };
+
+      try {
+        const res = await fetch('/api/v1/personalization/home', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const cards = await res.json();
+        renderCards(cards, userType);
+      } catch (err) {
+        console.error("Error fetching cards:", err);
+      }
+    }
+
+    function updateButtons(type) {
+      document.getElementById('btn-general').className = type === 'general' ? 'btn btn-primary w-100 fw-bold py-2' : 'btn btn-outline-primary w-100 fw-bold py-2';
+      document.getElementById('btn-farmer').className = type === 'farmer' ? 'btn btn-success w-100 fw-bold py-2' : 'btn btn-outline-success w-100 fw-bold py-2';
+      document.getElementById('btn-traveller').className = type === 'traveller' ? 'btn btn-info text-white w-100 fw-bold py-2' : 'btn btn-outline-info w-100 fw-bold py-2';
+      
+      const banner = document.getElementById('hero-banner');
+      if (type === 'farmer') banner.className = 'farmer-box p-4 mb-4 shadow';
+      else if (type === 'traveller') banner.className = 'traveller-box p-4 mb-4 shadow';
+      else banner.className = 'hero-box p-4 mb-4 shadow';
+    }
+
+    function renderCards(cards, type) {
+      const container = document.getElementById('cards-container');
+      container.innerHTML = '';
+
+      cards.forEach((card, idx) => {
+        let borderClass = 'card-general';
+        let badgeBg = 'bg-primary';
+        if (type === 'farmer') { borderClass = 'card-farmer'; badgeBg = 'bg-success'; }
+        if (type === 'traveller') { borderClass = 'card-traveller'; badgeBg = 'bg-info'; }
+
+        const cardEl = document.createElement('div');
+        cardEl.className = `card shadow-sm mb-3 ${borderClass}`;
+        cardEl.innerHTML = `
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="badge ${badgeBg} badge-priority">Priority Rank #${idx + 1} (Score: ${card.priority_score})</span>
+              <span class="text-muted small">Card Type: <code>${card.type}</code></span>
+            </div>
+            <h5 class="card-title fw-bold m-0">${card.title}</h5>
+            <p class="card-text text-secondary mt-1">${card.subtitle}</p>
+          </div>
+        `;
+        container.appendChild(cardEl);
+      });
+    }
+
+    function setPersona(type) {
+      fetchPersonalizedCards(type);
+    }
+
+    // Trigger live GPS location detection on load
+    window.addEventListener('DOMContentLoaded', () => {
+      requestLiveGPSLocation();
+    });
+  </script>
+</body>
+</html>
