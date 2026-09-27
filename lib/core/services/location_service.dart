@@ -127,18 +127,25 @@ class LocationService {
 
   Future<String> reverseGeocode(double lat, double lon) async {
     try {
-      final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=10');
-      final resp = await http.get(url, headers: {'User-Agent': 'MausamApp/1.0'}).timeout(const Duration(seconds: 4));
+      final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=16');
+      final resp = await http.get(url, headers: {'User-Agent': 'MausamApp/1.0'}).timeout(const Duration(seconds: 5));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         final address = data['address'] as Map<String, dynamic>?;
         if (address != null) {
-          final city = address['city'] ?? address['town'] ?? address['village'] ?? address['suburb'] ?? address['county'] ?? address['state_district'];
-          final state = address['state'];
-          if (city != null && state != null) {
-            return '$city, $state';
-          } else if (city != null) {
-            return city.toString();
+          final locality = address['city'] ??
+              address['town'] ??
+              address['village'] ??
+              address['suburb'] ??
+              address['municipality'] ??
+              address['neighbourhood'] ??
+              address['county'] ??
+              address['state_district'];
+          final state = address['state'] ?? address['country'];
+          if (locality != null && state != null) {
+            return '$locality, $state';
+          } else if (locality != null) {
+            return locality.toString();
           }
         }
       }
